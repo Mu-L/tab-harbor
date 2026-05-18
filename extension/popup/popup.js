@@ -2,7 +2,6 @@
 
 const popupTheme = globalThis.TabOutThemeControls || {};
 const popupIcons = globalThis.TabOutIconUtils || {};
-const popupListOrder = globalThis.TabOutListOrder || {};
 const popupSessionGroups = globalThis.TabOutSessionGroups || {};
 const popupGroupOrder = globalThis.TabOutGroupOrder || {};
 const popupI18n = globalThis.TabHarborI18n || {};
@@ -26,8 +25,6 @@ globalThis.popupState = popupState;
 globalThis.buildPopupTabGroups = buildPopupTabGroups;
 globalThis.getGroupDisplayLabel = getGroupDisplayLabel;
 globalThis.escapeAttr = escapeAttr;
-globalThis.friendlyDomain = friendlyDomain;
-globalThis.stripTitleNoise = stripTitleNoise;
 globalThis.getTabLabel = getTabLabel;
 globalThis.isLandingPage = isLandingPage;
 globalThis.matchCustomGroup = matchCustomGroup;
@@ -62,95 +59,6 @@ function escapeAttr(value = '') {
   return popupIcons.escapeHtmlAttribute ? popupIcons.escapeHtmlAttribute(value) : String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function friendlyDomain(domain) {
-  return String(domain || '')
-    .replace(/^www\./, '')
-    .replace(/\./g, ' ')
-    .trim();
-}
-
-function stripTitleNoise(title) {
-  if (!title) return '';
-  title = String(title);
-  title = title.replace(/^\(\d+\+?\)\s*/, '');
-  title = title.replace(/\s*\([\d,]+\+?\)\s*/g, ' ');
-  title = title.replace(/\s*[\-\u2010-\u2015]\s*[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
-  title = title.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
-  title = title.replace(/\s+on X:\s*/, ': ');
-  title = title.replace(/\s*\/\s*X\s*$/, '');
-  return title.trim();
-}
-
-function cleanTitle(title, hostname) {
-  if (!title || !hostname) return title || '';
-
-  const friendly = friendlyDomain(hostname);
-  const domain = hostname.replace(/^www\./, '');
-  const seps = [' - ', ' | ', ' — ', ' · ', ' – '];
-
-  for (const sep of seps) {
-    const idx = title.lastIndexOf(sep);
-    if (idx === -1) continue;
-    const suffix = title.slice(idx + sep.length).trim();
-    const suffixLow = suffix.toLowerCase();
-    if (
-      suffixLow === domain.toLowerCase() ||
-      suffixLow === friendly.toLowerCase() ||
-      suffixLow === domain.replace(/\.\w+$/, '').toLowerCase() ||
-      domain.toLowerCase().includes(suffixLow) ||
-      friendly.toLowerCase().includes(suffixLow)
-    ) {
-      const cleaned = title.slice(0, idx).trim();
-      if (cleaned.length >= 5) return cleaned;
-    }
-  }
-  return title;
-}
-
-function smartTitle(title, url) {
-  if (!url) return title || '';
-  let pathname = '';
-  let hostname = '';
-  try {
-    const parsed = new URL(url);
-    pathname = parsed.pathname;
-    hostname = parsed.hostname;
-  } catch {
-    return title || '';
-  }
-
-  const titleIsUrl = !title || title === url || title.startsWith(hostname) || title.startsWith('http');
-
-  if ((hostname === 'x.com' || hostname === 'twitter.com' || hostname === 'www.x.com') && pathname.includes('/status/')) {
-    const username = pathname.split('/')[1];
-    if (username) return titleIsUrl ? `Post by @${username}` : title;
-  }
-
-  if (hostname === 'github.com' || hostname === 'www.github.com') {
-    const parts = pathname.split('/').filter(Boolean);
-    if (parts.length >= 2) {
-      const [owner, repo, ...rest] = parts;
-      if (rest[0] === 'issues' && rest[1]) return `${owner}/${repo} Issue #${rest[1]}`;
-      if (rest[0] === 'pull' && rest[1]) return `${owner}/${repo} PR #${rest[1]}`;
-      if (rest[0] === 'blob' || rest[0] === 'tree') return `${owner}/${repo} — ${rest.slice(2).join('/')}`;
-      if (titleIsUrl) return `${owner}/${repo}`;
-    }
-  }
-
-  if ((hostname === 'www.youtube.com' || hostname === 'youtube.com') && pathname === '/watch' && titleIsUrl) {
-    return 'YouTube Video';
-  }
-
-  if ((hostname === 'www.reddit.com' || hostname === 'reddit.com' || hostname === 'old.reddit.com') && pathname.includes('/comments/')) {
-    const parts = pathname.split('/').filter(Boolean);
-    const subIdx = parts.indexOf('r');
-    if (subIdx !== -1 && parts[subIdx + 1] && titleIsUrl) {
-      return `r/${parts[subIdx + 1]} post`;
-    }
-  }
-
-  return title || url;
-}
 
 function getTabHostname(tab) {
   try {
@@ -173,6 +81,13 @@ function getTabLabel(tab) {
   } catch {
     return tab.url || 'Tab';
   }
+}
+
+function getTabOrderTokens(tab) {
+  const tokens = [];
+  if (tab?.id != null) tokens.push(String(tab.id));
+  if (tab?.url) tokens.push(String(tab.url));
+  return [...new Set(tokens.filter(Boolean))];
 }
 
 const filterTabs = popupTheme.filterRealTabs || (tabs => Array.isArray(tabs) ? tabs : []);
@@ -244,54 +159,29 @@ function normalizeGroupTabOrderState(input) {
   );
 }
 
-function reorderVisibleItemsByIds(items, orderIds, includeItem) {
-  if (!Array.isArray(items)) return [];
-  const list = items.slice();
-  const shouldInclude = typeof includeItem === 'function' ? includeItem : () => true;
-  const subset = list.filter(shouldInclude);
-  const normalizedOrder = Array.isArray(orderIds) ? orderIds.map(id => String(id)).filter(Boolean) : [];
-  if (!subset.length || subset.length !== normalizedOrder.length) return list;
-
-  const subsetMap = new Map(subset.map(item => [String(item.id), item]));
-  if (normalizedOrder.some(id => !subsetMap.has(id))) return list;
-
-  let nextIndex = 0;
-  return list.map(item => {
-    if (!shouldInclude(item)) return item;
-    const nextItem = subsetMap.get(normalizedOrder[nextIndex]);
-    nextIndex += 1;
-    return nextItem || item;
-  });
-}
-
 function reorderGroupTabsByStoredUrls(tabs, groupKey) {
   const orderIds = popupState.groupTabOrder[String(groupKey)] || [];
   if (!Array.isArray(tabs) || !tabs.length || !orderIds.length) return Array.isArray(tabs) ? tabs.slice() : [];
 
-  const wrappedTabs = tabs.map(tab => ({
-    id: String(tab?.url || ''),
-    tab,
-  }));
-  const subsetUrls = new Set(orderIds);
-  const reordered = reorderVisibleItemsByIds(
-    wrappedTabs,
-    orderIds,
-    item => subsetUrls.has(item.id)
-  );
-  return reordered.map(item => item.tab);
+  const orderIndex = new Map(orderIds.map((id, index) => [String(id), index]));
+  return tabs
+    .map((tab, originalIndex) => {
+      const match = getTabOrderTokens(tab)
+        .map(token => orderIndex.get(token))
+        .find(index => Number.isInteger(index));
+      return {
+        tab,
+        originalIndex,
+        order: Number.isInteger(match) ? match : Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .sort((a, b) => a.order - b.order || a.originalIndex - b.originalIndex)
+    .map(entry => entry.tab);
 }
 
 function getOrderedUniqueTabsForGroup(group) {
   const tabs = Array.isArray(group?.tabs) ? group.tabs : [];
-  const seen = new Set();
-  const uniqueTabs = [];
-  for (const tab of tabs) {
-    const url = String(tab?.url || '');
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    uniqueTabs.push(tab);
-  }
-  return reorderGroupTabsByStoredUrls(uniqueTabs, group?.domain);
+  return reorderGroupTabsByStoredUrls(tabs, group?.domain);
 }
 
 async function loadPopupState() {
@@ -521,18 +411,27 @@ function renderPopupTabs() {
   const tabs = popupState.openTabs;
 
   if (tabs.length === 0) {
-    navEl.innerHTML = '';
-    listEl.innerHTML = '';
-    emptyEl.hidden = false;
+    if (navEl.innerHTML !== '') navEl.innerHTML = '';
+    if (listEl.innerHTML !== '') listEl.innerHTML = '';
+    if (emptyEl.hidden !== false) emptyEl.hidden = false;
     return;
   }
 
   const groups = buildPopupTabGroups();
-  navEl.innerHTML = groups.map((g, i) => renderGroupNav(g, i)).join('');
-  navEl.classList.add('is-entering');
-  listEl.innerHTML = groups.map((g, i) => renderTabGroup(g, i)).join('');
-  listEl.classList.add('is-entering');
-  emptyEl.hidden = true;
+  const newNavHtml = groups.map((g, i) => renderGroupNav(g, i)).join('');
+  const newListHtml = groups.map((g, i) => renderTabGroup(g, i)).join('');
+
+  if (navEl.innerHTML !== newNavHtml) {
+    navEl.innerHTML = newNavHtml;
+    navEl.classList.add('is-entering');
+  }
+  if (listEl.innerHTML !== newListHtml) {
+    listEl.innerHTML = newListHtml;
+    listEl.classList.add('is-entering');
+  }
+  if (emptyEl.hidden !== true) {
+    emptyEl.hidden = true;
+  }
 
   requestAnimationFrame(() => requestAnimationFrame(() => {
     navEl.classList.add('is-ready');
@@ -763,7 +662,24 @@ function initializePopup() {
       actionEl.classList.add('is-loading');
       try {
         await chrome.tabs.remove(tabId);
+        // Suppress auto-refresh scheduled by tabs.onRemoved to avoid double render
+        if (popupRefreshTimer) {
+          clearTimeout(popupRefreshTimer);
+          popupRefreshTimer = null;
+        }
+        popupRefreshQueued = false;
+        // Wait for any already-running refresh to settle before re-rendering
+        if (popupRefreshInFlight) {
+          try { await popupRefreshInFlight; } catch { /* swallow */ }
+        }
         await refreshPopup();
+        // tabs.onActivated (from switching to a new active tab) may have
+        // rescheduled a refresh during our await — suppress it
+        if (popupRefreshTimer) {
+          clearTimeout(popupRefreshTimer);
+          popupRefreshTimer = null;
+        }
+        popupRefreshQueued = false;
       } finally {
         actionEl.classList.remove('is-loading');
       }
