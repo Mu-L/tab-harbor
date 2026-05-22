@@ -44,7 +44,7 @@
 
     <!-- ================================================================
        MAIN CONTENT AREA — left column for open tabs, right rail for
-       greeting/date + saved for later
+       greeting/date + drawer controls
        ================================================================ -->
     <div class="dashboard-columns" id="dashboardColumns">
 
@@ -127,15 +127,6 @@
     </main>
 
     <div class="drawer-trigger-stack" id="drawerTriggerStack">
-      <button class="deferred-trigger" id="deferredTrigger" type="button" style="display:none" aria-expanded="false"
-        aria-controls="drawerColumn" aria-label="Open saved for later">
-        <svg class="deferred-trigger-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-          stroke-width="1.9" stroke="currentColor" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M17.25 6.75v13.22a.53.53 0 0 1-.822.443L12 17.348l-4.428 3.065a.53.53 0 0 1-.822-.442V6.75A2.25 2.25 0 0 1 9 4.5h6a2.25 2.25 0 0 1 2.25 2.25Z" />
-        </svg>
-      </button>
-
       <button class="deferred-trigger todo-trigger" id="todoTrigger" type="button" aria-expanded="false"
         aria-controls="drawerColumn" aria-label="Open todos">
         <svg class="deferred-trigger-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none"
@@ -154,76 +145,13 @@
 
     <!-- RIGHT COLUMN: Drawer -->
     <aside class="deferred-column" id="drawerColumn" style="display:none" aria-hidden="true" role="dialog"
-      aria-modal="false" aria-label="Saved items and todos" tabindex="-1">
+      aria-modal="false" aria-label="Todos" tabindex="-1">
       <div class="deferred-shell">
-        <section class="drawer-panel is-active" id="savedPanel" role="tabpanel" aria-label="Saved for later"
-          tabindex="-1">
-          <div class="section-header deferred-header">
-            <div class="drawer-title-switch" role="tablist" aria-label="Drawer views">
-              <button class="drawer-title-btn is-active" id="savedPanelTab" type="button" role="tab"
-                aria-selected="true" aria-controls="savedPanel" data-action="switch-drawer-view" data-view="saved">Saved
-                for later</button>
-              <button class="drawer-title-btn" id="todoPanelTab" type="button" role="tab" aria-selected="false"
-                aria-controls="todoPanel" data-action="switch-drawer-view" data-view="todos">Todos</button>
-            </div>
-            <div class="section-line"></div>
-            <div class="section-count" id="deferredCount"></div>
-            <div class="drawer-header-actions">
-              <button class="drawer-icon-btn" id="savedSearchToggle" type="button" data-action="toggle-saved-search"
-                aria-label="Search saved for later" aria-expanded="false" aria-controls="savedSearchWrap">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="m21 21-4.35-4.35m1.6-5.4a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-                </svg>
-              </button>
-              <button class="drawer-icon-btn" id="deferredCloseBtn" type="button" aria-label="Close right drawer">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="saved-search-wrap" id="savedSearchWrap" style="display:none">
-            <input type="search" class="archive-search" id="savedSearchInput" placeholder="Search saved pages..."
-              aria-label="Search saved pages">
-          </div>
-
-          <div class="deferred-list" id="deferredList"></div>
-
-          <div class="deferred-empty" id="deferredEmpty" style="display:none">
-            Nothing saved yet. Park articles and tabs here when they matter, just not right now.
-          </div>
-
-          <div class="deferred-archive" id="deferredArchive" style="display:none">
-            <div class="archive-header-row">
-              <button class="archive-toggle" id="archiveToggle" type="button" aria-expanded="false"
-                aria-controls="archiveBody">
-                <svg class="archive-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                  stroke-width="2" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-                Archive
-                <span class="archive-count" id="archiveCount"></span>
-              </button>
-              <button class="archive-clear-btn" id="clearArchiveBtn" type="button" data-action="clear-archive">Clear
-                archive</button>
-            </div>
-            <div class="archive-body" id="archiveBody" style="display:none" hidden>
-              <div class="archive-list" id="archiveList"></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="drawer-panel" id="todoPanel" role="tabpanel" aria-label="Todos" tabindex="-1">
+        <section class="drawer-panel is-active" id="todoPanel" role="tabpanel" aria-label="Todos" tabindex="-1">
           <div class="section-header deferred-header todo-header">
-            <div class="drawer-title-switch" role="tablist" aria-label="Drawer views">
-              <button class="drawer-title-btn" type="button" role="tab" aria-selected="false" aria-controls="savedPanel"
-                data-action="switch-drawer-view" data-view="saved">Saved for later</button>
+            <div class="drawer-title-switch">
               <button class="drawer-title-btn is-active" type="button" role="tab" aria-selected="true"
-                aria-controls="todoPanel" data-action="switch-drawer-view" data-view="todos">Todos</button>
+                aria-controls="todoPanel" data-view="todos">Todos</button>
             </div>
             <div class="section-line"></div>
             <div class="section-count" id="todoCount">0</div>

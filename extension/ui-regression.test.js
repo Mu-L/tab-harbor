@@ -299,8 +299,8 @@ test('index includes a back-to-top floating button', () => {
   assert.match(html, /id="backToTopBtn"/);
 });
 
-test('index includes deferred drawer trigger and overlay', () => {
-  assert.match(html, /id="deferredTrigger"/);
+test('index includes todo drawer trigger and overlay without saved-for-later trigger', () => {
+  assert.doesNotMatch(html, /id="deferredTrigger"/);
   assert.match(html, /id="todoTrigger"/);
   assert.match(html, /id="deferredOverlay"/);
   assert.match(html, /id="headerSearchForm"/);
@@ -437,9 +437,9 @@ test('deferred drawer styles and behavior are wired up', () => {
   assert.match(css, /\.deferred-trigger\s*\{/);
   assert.match(css, /\.deferred-overlay\.visible\s*\{/);
   assert.match(css, /\.deferred-column\.open\s*\{/);
-  assert.match(appJs, /const nextOpen = !\(deferredPanelOpen && drawerView === 'saved'\)/);
-  assert.match(appJs, /const nextOpen = !\(deferredPanelOpen && drawerView === 'todos'\)/);
-  assert.match(appJs, /toggle-saved-search/);
+  assert.match(appJs, /const nextOpen = !deferredPanelOpen/);
+  assert.doesNotMatch(appJs, /drawerView === 'saved'/);
+  assert.doesNotMatch(appJs, /toggle-saved-search/);
   assert.match(appJs, /toggle-todo-search/);
   assert.match(appJs, /toggle-theme-menu/);
   assert.match(appJs, /select-theme/);
@@ -450,7 +450,7 @@ test('deferred drawer styles and behavior are wired up', () => {
   assert.match(appJs, /saveDrawerItemOrder/);
   assert.match(appJs, /previewDrawerItemOrder/);
   assert.match(html, /id="clearTodoArchiveBtn"/);
-  assert.match(html, /id="savedSearchToggle"/);
+  assert.doesNotMatch(html, /id="savedSearchToggle"/);
   assert.match(html, /id="todoNewBtn"/);
   assert.match(css, /\.deferred-header\s*\{[\s\S]*animation:\s*none/);
   assert.match(css, /\.drawer-title-btn\s*\{[\s\S]*text-decoration:\s*underline/);
@@ -722,10 +722,10 @@ test('collapsed drawer triggers use compact neutral frames with theme-ready toke
   assert.doesNotMatch(css, /#todoTrigger\s*\{/);
 });
 
-test('saved and todo lists expose drag handles with drag-state styling', () => {
+test('todo list and tab chips expose drag handles with drag-state styling', () => {
   const css = fs.readFileSync(path.join(__dirname, 'style.css'), 'utf8');
 
-  assert.match(drawerJs, /class="drawer-reorder-handle"/);
+  assert.match(drawerJs, /class="drawer-reorder-handle todo-reorder-handle"/);
   assert.match(appJs, /data-chip-drag-handle="tab"/);
   assert.match(appJs, /const chipItem = e\.target\.closest\('\[data-chip-sort-id\]'\);/);
   assert.match(appJs, /const chipAction = e\.target\.closest\('\.chip-actions'\);/);
@@ -784,7 +784,7 @@ test('saved and todo lists expose drag handles with drag-state styling', () => {
   assert.match(appJs, /if \(Date\.now\(\) < suppressPageChipClickUntil\) return;/);
   assert.match(appJs, /suppressPageChipClickUntil = Date\.now\(\) \+ 250;/);
   assert.match(appJs, /tabs:\s*getOrderedUniqueTabsForGroup\(group\)/);
-  assert.match(drawerJs, /data-drag-handle="saved"/);
+  assert.doesNotMatch(drawerJs, /data-drag-handle="saved"/);
   assert.match(drawerJs, /data-drag-handle="todo"/);
   assert.match(drawerJs, /data-drag-handle="todo"[\s\S]*M8 6h\.01M8 12h\.01M8 18h\.01M16 6h\.01M16 12h\.01M16 18h\.01/);
   assert.doesNotMatch(drawerJs, /title="Drag to reorder"/);
@@ -801,7 +801,8 @@ test('saved and todo lists expose drag handles with drag-state styling', () => {
   assert.match(css, /\.page-chip\.is-dragging\s*\{/);
   assert.match(css, /\.chip-reorder-placeholder\s*\{/);
   assert.match(css, /\.mission-card\.is-drop-target\s*\{/);
-  assert.match(css, /\.deferred-item\.is-dragging,\s*\.todo-item\.is-dragging\s*\{/);
+  assert.doesNotMatch(css, /\.deferred-item\.is-dragging/);
+  assert.match(css, /\.todo-item\.is-dragging\s*\{/);
   assert.match(css, /\.chip-reorder-handle\s*\{[\s\S]*color:\s*color-mix\(in srgb, var\(--ink\) 84%, var\(--muted\) 16%\);/);
   assert.match(css, /\.drawer-reorder-handle\s*\{[\s\S]*border:\s*none;[\s\S]*background:\s*transparent;[\s\S]*color:\s*color-mix\(in srgb, var\(--ink\) 86%, var\(--muted\) 14%\);/);
 });
@@ -831,9 +832,9 @@ test('manual groups expose an inline rename button with pencil styling', () => {
   assert.match(appJs, /class="mission-rename-trigger"/);
 });
 
-test('saved trigger icon uses the bookmark artwork', () => {
-  assert.match(html, /id="deferredTrigger"[\s\S]*viewBox="0 0 24 24"/);
-  assert.match(html, /id="deferredTrigger"[\s\S]*M17\.25 6\.75v13\.22/);
+test('saved-for-later trigger and bookmark artwork are removed', () => {
+  assert.doesNotMatch(html, /id="deferredTrigger"/);
+  assert.doesNotMatch(html, /M17\.25 6\.75v13\.22/);
 });
 
 test('collapsed drawer triggers stay icon-only', () => {
@@ -846,17 +847,17 @@ test('todo trigger icon uses the checklist artwork', () => {
   assert.match(html, /id="todoTrigger"[\s\S]*M926\.624 660\.752a32 32 0 0 1 0 45\.248/);
 });
 
-test('archive supports deleting single items and clearing all archived items', () => {
+test('todo archive supports deleting single items and clearing archived todos', () => {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
-  assert.match(drawerJs, /restore-deferred/);
-  assert.match(appJs, /reopenSavedTab\(restored\.url\)/);
-  assert.match(drawerJs, /currentTab\.url !== 'about:blank'/);
-  assert.match(drawerJs, /delete-archive-item/);
-  assert.match(appJs, /clear-archive/);
+  assert.doesNotMatch(drawerJs, /restore-deferred/);
+  assert.doesNotMatch(appJs, /reopenSavedTab\(restored\.url\)/);
+  assert.doesNotMatch(drawerJs, /delete-archive-item/);
+  assert.doesNotMatch(appJs, /clear-archive/);
   assert.match(appJs, /clear-todo-archive/);
   assert.match(html, /class="archive-header-row"/);
-  assert.match(html, /id="clearArchiveBtn"/);
+  assert.doesNotMatch(html, /id="clearArchiveBtn"/);
+  assert.match(html, /id="clearTodoArchiveBtn"/);
   assert.doesNotMatch(drawerJs, /archive-actions/);
 });
 
@@ -872,11 +873,11 @@ test('deferred trigger supports vertical drag positioning', () => {
 });
 
 test('drawer and search controls expose stronger accessibility semantics', () => {
-  assert.match(html, /id="drawerColumn"[\s\S]*role="dialog"[\s\S]*aria-label="Saved items and todos"[\s\S]*tabindex="-1"/);
-  assert.match(html, /role="tablist" aria-label="Drawer views"/);
-  assert.match(html, /id="savedSearchToggle"[\s\S]*aria-expanded="false"[\s\S]*aria-controls="savedSearchWrap"/);
+  assert.match(html, /id="drawerColumn"[\s\S]*role="dialog"[\s\S]*aria-label="Todos"[\s\S]*tabindex="-1"/);
+  assert.doesNotMatch(html, /role="tablist" aria-label="Drawer views"/);
+  assert.doesNotMatch(html, /id="savedSearchToggle"[\s\S]*aria-expanded="false"[\s\S]*aria-controls="savedSearchWrap"/);
   assert.match(html, /id="todoSearchToggle"[\s\S]*aria-expanded="false"[\s\S]*aria-controls="todoSearchWrap"/);
-  assert.match(html, /type="search"[\s\S]*id="savedSearchInput"[\s\S]*aria-label="Search saved pages"/);
+  assert.doesNotMatch(html, /type="search"[\s\S]*id="savedSearchInput"[\s\S]*aria-label="Search saved pages"/);
   assert.match(html, /type="search"[\s\S]*id="todoSearchInput"[\s\S]*aria-label="Search todos"/);
 });
 

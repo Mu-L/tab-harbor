@@ -9,8 +9,8 @@
    1. Reads open browser tabs directly via chrome.tabs.query()
    2. Groups tabs by domain with a landing pages category
    3. Renders domain cards, banners, and stats
-   4. Handles all user actions (close tabs, save for later, focus tab)
-   5. Stores "Saved for Later" tabs in chrome.storage.local (no server)
+   4. Handles all user actions (close tabs, saved sessions, focus tab)
+   5. Stores dashboard preferences and workspace state in chrome.storage.local
    ================================================================ */
 
 'use strict';
@@ -2270,17 +2270,6 @@ function previewDrawerItemOrder(clientY) {
   animateDrawerListItems(listEl, previousRects);
 }
 
-async function reorderSavedTabs(orderIds) {
-  const { deferred = [] } = await chrome.storage.local.get('deferred');
-  const nextDeferred = reorderVisibleItemsByIds(
-    deferred,
-    orderIds,
-    item => item && item.id && !item.completed && !item.dismissed
-  );
-  await chrome.storage.local.set({ deferred: nextDeferred });
-  return nextDeferred;
-}
-
 async function reorderTodoItems(orderIds) {
   const todos = await getTodos();
   const nextTodos = reorderVisibleItemsByIds(
@@ -2293,11 +2282,6 @@ async function reorderTodoItems(orderIds) {
 
 async function saveDrawerItemOrder(kind, orderIds) {
   if (!Array.isArray(orderIds) || !orderIds.length) return;
-
-  if (kind === 'saved') {
-    await reorderSavedTabs(orderIds);
-    return;
-  }
 
   if (kind === 'todo') {
     await reorderTodoItems(orderIds);
@@ -2667,9 +2651,6 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
         <button class="chip-action chip-session-save" type="button" data-action="save-single-tab-session" data-tab-id="${safeTabId}" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" aria-label="${runtimeT ? runtimeT('saveTabSession') : 'Save tab session'}" data-tooltip="${runtimeT ? runtimeT('saveTabSession') : 'Save tab session'}">
           ${ICONS.archive}
         </button>
-        <button class="chip-action chip-save" type="button" data-action="defer-single-tab" data-tab-id="${safeTabId}" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" aria-label="${runtimeT ? runtimeT('saveForLater') : 'Save for later'}" data-tooltip="${runtimeT ? runtimeT('saveForLater') : 'Save for later'}">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
-        </button>
         <button class="chip-action chip-close" type="button" data-action="close-single-tab" data-tab-id="${safeTabId}" data-tab-url="${safeUrl}" aria-label="${runtimeT ? runtimeT('closeThisTab') : 'Close this tab'}" data-tooltip="${runtimeT ? runtimeT('closeThisTab') : 'Close this tab'}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
         </button>
@@ -2760,9 +2741,6 @@ function renderDomainCard(group) {
         </button>` : ''}
         <button class="chip-action chip-session-save" data-action="save-single-tab-session" data-tab-id="${tab.id}" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" aria-label="${runtimeT ? runtimeT('saveTabSession') : 'Save tab session'}" data-tooltip="${runtimeT ? runtimeT('saveTabSession') : 'Save tab session'}">
           ${ICONS.archive}
-        </button>
-        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-id="${tab.id}" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" aria-label="${runtimeT ? runtimeT('saveForLater') : 'Save for later'}" data-tooltip="${runtimeT ? runtimeT('saveForLater') : 'Save for later'}">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
         </button>
         <button class="chip-action chip-close" data-action="close-single-tab" data-tab-id="${tab.id}" data-tab-url="${safeUrl}" aria-label="${runtimeT ? runtimeT('closeThisTab') : 'Close this tab'}" data-tooltip="${runtimeT ? runtimeT('closeThisTab') : 'Close this tab'}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -3761,45 +3739,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // ---- Save a single tab for later (then close it) ----
-  if (action === 'defer-single-tab') {
-    e.stopPropagation();
-    const tabUrl   = actionEl.dataset.tabUrl;
-    const tabId    = actionEl.dataset.tabId || '';
-    const tabTitle = actionEl.dataset.tabTitle || tabUrl;
-    if (!tabUrl && !tabId) return;
-
-    // Suppress auto-refresh to prevent animation spam
-    window.__suppressAutoRefreshUntil = Date.now() + 2000;
-
-    // Save to chrome.storage.local
-    try {
-      await saveTabForLater({ url: tabUrl, title: tabTitle });
-    } catch (err) {
-      console.error('[tab-harbor] Failed to save tab:', err);
-      showToast(runtimeT ? runtimeT('toastFailedToSaveTab') : 'Failed to save tab');
-      return;
-    }
-
-    // Close the tab in Chrome. Prefer id for suspended tabs and duplicates.
-    await removeOpenTabByIdOrUrl(tabId, tabUrl);
-    await fetchOpenTabs();
-    await loadSessionGroups(openTabs.map(tab => tab.id));
-
-    // Animate chip out
-    const chip = actionEl.closest('.page-chip');
-    if (chip) {
-      chip.style.transition = 'opacity 0.2s, transform 0.2s';
-      chip.style.opacity    = '0';
-      chip.style.transform  = 'scale(0.8)';
-      setTimeout(() => chip.remove(), 200);
-    }
-
-    showToast(runtimeT ? runtimeT('toastSavedForLater') : 'Saved for later');
-    await renderDeferredColumn();
-    return;
-  }
-
   // ---- Save a single tab as its own session snapshot (then close it) ----
   if (action === 'save-single-tab-session') {
     e.stopPropagation();
@@ -3811,94 +3750,6 @@ document.addEventListener('click', async (e) => {
       initialTabIds: [tabId],
       scopeTabIds: [tabId],
     });
-    return;
-  }
-
-  // ---- Check off a saved tab (moves it to archive) ----
-  if (action === 'check-deferred') {
-    const id = actionEl.dataset.deferredId;
-    if (!id) return;
-
-    await checkOffSavedTab(id);
-
-    // Animate: strikethrough first, then slide out
-    const item = actionEl.closest('.deferred-item');
-    if (item) {
-      item.classList.add('checked');
-      setTimeout(() => {
-        item.classList.add('removing');
-        setTimeout(() => {
-          item.remove();
-          renderDeferredColumn(); // refresh counts and archive
-        }, 300);
-      }, 800);
-    }
-    return;
-  }
-
-  // ---- Dismiss a saved tab (removes it entirely) ----
-  if (action === 'dismiss-deferred') {
-    const id = actionEl.dataset.deferredId;
-    if (!id) return;
-
-    await dismissSavedTab(id);
-
-    const item = actionEl.closest('.deferred-item');
-    if (item) {
-      item.classList.add('removing');
-      setTimeout(() => {
-        item.remove();
-        renderDeferredColumn();
-      }, 300);
-    }
-    return;
-  }
-
-  // ---- Restore an active saved tab back to normal (remove from saved) ----
-  if (action === 'restore-deferred') {
-    const id = actionEl.dataset.deferredId;
-    if (!id) return;
-
-    const restored = await restoreSavedTab(id);
-    if (!restored?.url) return;
-
-    await reopenSavedTab(restored.url);
-    window.__suppressAutoRefreshUntil = Date.now() + 2000;
-    await renderDashboard();
-    if (window.__tabRefreshTimeout) {
-      clearTimeout(window.__tabRefreshTimeout);
-      window.__tabRefreshTimeout = null;
-    }
-    window.__suppressAutoRefreshUntil = 0;
-
-    const item = actionEl.closest('.deferred-item');
-    if (item) {
-      item.classList.add('removing');
-      setTimeout(() => {
-        item.remove();
-      }, 300);
-    }
-
-    showToast(runtimeT ? runtimeT('toastRestoredToOpenTabs') : 'Restored to open tabs');
-    return;
-  }
-
-  // ---- Delete a single archived item ----
-  if (action === 'delete-archive-item') {
-    const id = actionEl.dataset.archiveId;
-    if (!id) return;
-
-    await deleteArchivedTab(id);
-    await renderDeferredColumn();
-    showToast(runtimeT ? runtimeT('toastRemovedFromArchive') : 'Removed from archive');
-    return;
-  }
-
-  // ---- Clear all archived items ----
-  if (action === 'clear-archive') {
-    await clearArchivedTabs();
-    await renderDeferredColumn();
-    showToast(runtimeT ? runtimeT('toastArchiveCleared') : 'Archive cleared');
     return;
   }
 
@@ -4096,25 +3947,16 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-  const trigger = e.target.closest('#deferredTrigger');
-  if (trigger) {
-    if (Date.now() < deferredTriggerSuppressClickUntil) return;
-    const nextOpen = !(deferredPanelOpen && drawerView === 'saved');
-    drawerView = 'saved';
-    setDeferredPanelOpen(nextOpen);
-    return;
-  }
-
   const todoTrigger = e.target.closest('#todoTrigger');
   if (todoTrigger) {
     if (Date.now() < deferredTriggerSuppressClickUntil) return;
-    const nextOpen = !(deferredPanelOpen && drawerView === 'todos');
+    const nextOpen = !deferredPanelOpen;
     drawerView = 'todos';
     setDeferredPanelOpen(nextOpen);
     return;
   }
 
-  if (e.target.closest('#deferredCloseBtn') || e.target.closest('#deferredOverlay')) {
+  if (e.target.closest('#deferredOverlay')) {
     setDeferredPanelOpen(false);
   }
 });
@@ -4209,20 +4051,6 @@ document.addEventListener('click', async (e) => {
   if (!actionEl) return;
 
   const action = actionEl.dataset.action;
-
-  if (action === 'switch-drawer-view') {
-    drawerView = actionEl.dataset.view || 'saved';
-    todoDetailId = '';
-    await renderDeferredColumn();
-    return;
-  }
-
-  if (action === 'toggle-saved-search') {
-    savedSearchOpen = !savedSearchOpen;
-    if (!savedSearchOpen) savedSearchQuery = '';
-    await renderDeferredColumn();
-    return;
-  }
 
   if (action === 'toggle-todo-search') {
     todoSearchOpen = !todoSearchOpen;
@@ -4482,9 +4310,7 @@ document.addEventListener('pointerup', async (e) => {
   clearDrawerItemDragState();
 
   if (moved) {
-    if (draggedKind === 'saved') {
-      await renderDeferredColumn();
-    } else if (draggedKind === 'todo') {
+    if (draggedKind === 'todo') {
       await renderTodoPanel();
     }
   }
@@ -4549,21 +4375,6 @@ document.addEventListener('pointerup', async () => {
   }
 });
 
-// ---- Archive toggle — expand/collapse the archive section ----
-document.addEventListener('click', (e) => {
-  const toggle = e.target.closest('#archiveToggle');
-  if (!toggle) return;
-
-  const nextOpen = !toggle.classList.contains('open');
-  toggle.classList.toggle('open', nextOpen);
-  toggle.setAttribute('aria-expanded', String(nextOpen));
-  const body = document.getElementById('archiveBody');
-  if (body) {
-    body.hidden = !nextOpen;
-    body.style.display = nextOpen ? 'block' : 'none';
-  }
-});
-
 document.addEventListener('click', (e) => {
   const toggle = e.target.closest('#todoArchiveToggle');
   if (!toggle) return;
@@ -4625,9 +4436,7 @@ document.addEventListener('input', async (e) => {
     return;
   }
 
-  if (e.target.id !== 'savedSearchInput') return;
-  savedSearchQuery = e.target.value.trim();
-  await renderDeferredColumn();
+  return;
 });
 
 document.addEventListener('input', (e) => {

@@ -3413,7 +3413,7 @@ body.entry-animations-enabled .deferred-column .section-header { animation: fade
   pointer-events: auto;
 }
 
-/* Saved for later drawer — overlay on desktop, full-screen on mobile */
+/* Right drawer — overlay on desktop, full-screen on mobile */
 .deferred-column {
   position: fixed;
   top: 20px;
@@ -3841,7 +3841,6 @@ body.page-chip-drop-new-group .main-content {
   margin: 4px 0;
 }
 
-.deferred-item.is-dragging,
 .todo-item.is-dragging {
   position: fixed;
   left: var(--drag-left, 0);
