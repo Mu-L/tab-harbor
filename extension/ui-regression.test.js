@@ -751,8 +751,10 @@ test('saved and todo lists expose drag handles with drag-state styling', () => {
   assert.match(appJs, /tabs:\s*getOrderedUniqueTabsForGroup\(group\)/);
   assert.match(drawerJs, /data-drag-handle="saved"/);
   assert.match(drawerJs, /data-drag-handle="todo"/);
+  assert.match(drawerJs, /data-drag-handle="todo"[\s\S]*M8 6h\.01M8 12h\.01M8 18h\.01M16 6h\.01M16 12h\.01M16 18h\.01/);
   assert.doesNotMatch(drawerJs, /title="Drag to reorder"/);
   assert.match(css, /\.drawer-reorder-handle\s*\{/);
+  assert.match(css, /\.todo-reorder-handle\s*\{[\s\S]*width:\s*30px;[\s\S]*height:\s*30px;/);
   assert.match(css, /\.page-chip > \.chip-reorder-handle\s*\{[\s\S]*width:\s*30px;[\s\S]*height:\s*30px;/);
   assert.match(css, /\.chip-reorder-handle\s*\{[\s\S]*opacity:\s*1;[\s\S]*border:\s*1px solid/);
   assert.match(css, /\.drawer-reorder-placeholder\s*\{/);
@@ -865,6 +867,21 @@ test('active todos expose edit and delete controls in list and detail views', ()
   assert.match(drawerJs, /class="todo-action-btn todo-delete"/);
   assert.match(appJs, /if \(action === 'edit-todo'\)/);
   assert.match(appJs, /if \(action === 'delete-todo'\)/);
+});
+
+test('todos use an inline editor panel instead of browser prompts', () => {
+  assert.match(drawerJs, /let todoEditorState = createTodoEditorState\(\);/);
+  assert.match(drawerJs, /function renderTodoEditor\(\)/);
+  assert.match(drawerJs, /id="todoEditorView"/);
+  assert.match(drawerJs, /name="title"[\s\S]*class="todo-editor-input"/);
+  assert.match(drawerJs, /name="description"[\s\S]*class="todo-editor-input todo-editor-textarea"/);
+  assert.match(drawerJs, /data-action="submit-todo-editor"/);
+  assert.match(drawerJs, /data-action="cancel-todo-editor"/);
+  assert.match(appJs, /if \(action === 'create-todo'\) \{[\s\S]*openTodoEditor\(\{ mode: 'create'/);
+  assert.match(appJs, /if \(action === 'edit-todo'\) \{[\s\S]*openTodoEditor\(\{[\s\S]*mode: 'edit'/);
+  assert.match(appJs, /if \(action === 'submit-todo-editor'\)/);
+  assert.match(appJs, /if \(action === 'update-todo-editor-field'\)/);
+  assert.doesNotMatch(appJs, /window\.prompt\(runtimeT \? runtimeT\('promptTodoTitle'\)/);
 });
 
 test('interactive controls keep button semantics and reduced-motion support', () => {
