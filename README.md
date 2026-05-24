@@ -2,9 +2,9 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**A calmer Chrome new tab dashboard for open tabs, quick links, saved reads, and lightweight todos.**
+**A calmer Chrome new tab dashboard for open tabs, quick links, saved sessions, and lightweight todos.**
 
-Tab Harbor turns Chrome's new tab page into a place where you can keep working. You immediately see what is already open, which pages should be moved into read-later, and what still needs your attention.
+Tab Harbor turns Chrome's new tab page into a place where you can keep working. You immediately see what is already open, what should be saved for later, and what still needs your attention.
 
 <p align="center">
   <img src="assets/readme/feature-tabs.png" alt="Tab Harbor overview" width="760">
@@ -14,9 +14,9 @@ Tab Harbor turns Chrome's new tab page into a place where you can keep working. 
 
 - **Tabs are automatically organized by domain.** Tab Harbor groups open pages by domain, and moves homepage-style tabs into a dedicated `Homepages` group, so you can quickly see what you are actually working on.
 - **You can still organize things around your own workflow.** When domain-based grouping is not enough, you can create manual groups, keep common quick links around, and jump back to the right section from the top icon rail.
-- **Read later and todos move into the drawer, separate from the main workspace, without needing another app.** You can search, restore, or archive them later instead of leaving everything hanging in the browser tab bar.
-- **It is not just a tab-cleaning tool.** Quick links, todos, open tabs, and saved reads all live in the same new tab page, so the next thing you need is usually right in front of you.
-- **It tries to make the workspace calmer without making the system heavier.** You can switch themes, tune transparency, set a custom background, and clean duplicate tabs with one click, while everything still stays in `chrome.storage.local` with no backend or account.
+- **Saved tabs now behave more like sessions.** You can choose what to save, add tabs to an existing saved session, restore them later, and keep the overview tidy with collapsed session groups when you do not need every tab in front of you.
+- **Todos stay close, but out of the way.** The drawer lets you create, edit, delete, search, and archive todos without leaving the page.
+- **It keeps getting calmer without getting heavier.** You can switch themes, tune transparency, adjust text and shortcut size, set a custom background, sleep inactive tabs, and clean duplicate tabs with one click, while everything still stays in `chrome.storage.local` with no backend or account.
 
 ## 🖼️ Feature Tour
 
@@ -27,8 +27,8 @@ Tab Harbor turns Chrome's new tab page into a place where you can keep working. 
       <img src="assets/readme/feature-tabs.png" alt="Tabs" width="100%">
     </td>
     <td width="33.33%" valign="top">
-      <strong>Saved reads</strong><br><br>
-      <img src="assets/readme/feature-saved-drawer.png" alt="Saved reads drawer" width="100%">
+      <strong>Saved sessions</strong><br><br>
+      <img src="assets/readme/feature-saved-drawer.png" alt="Saved sessions drawer" width="100%">
     </td>
     <td width="33.33%" valign="top">
       <strong>Todos and quick jumping</strong><br><br>
@@ -41,9 +41,9 @@ Tab Harbor turns Chrome's new tab page into a place where you can keep working. 
 
 Tab Harbor organizes tabs more like a workspace: **domain-based groups, manual groups, quick access links, and fast jumping from the top icon rail**. If you want to clean up the browser a bit more, you can **also remove duplicate tabs with one click**.
 
-### Saved reads
+### Saved sessions
 
-Pages that are not for right now can be **moved into the side drawer, then searched, restored, or archived later**, instead of living forever in the browser tab bar.
+Pages you do not need right now can be **saved as sessions, added to an existing session, restored later, or kept collapsed for a quieter overview**.
 
 ### Todos and quick jumping
 
@@ -51,7 +51,7 @@ Tab Harbor also works as a tiny action layer: jot down todos, keep short descrip
 
 ### Theme switching
 
-When you want the page to feel more like your own workspace, you can **switch themes, tune transparency, and use a custom background image**.
+When you want the page to feel more like your own workspace, you can **switch themes, tune transparency, adjust text and shortcut size, and use a custom background image**.
 
 <table>
   <tr>
@@ -64,6 +64,10 @@ When you want the page to feel more like your own workspace, you can **switch th
   </tr>
 </table>
 
+### Manual sleep control
+
+When you want to slow a tab down without losing it, you can **sleep individual tabs or put an entire group to sleep from the workspace itself**.
+
 ## 🌊 Why It Feels Different
 
 Most new tab pages try to be a search box, a wallpaper, or a speed dial. Tab Harbor is closer to a lightweight browser control room. It keeps the messy reality of browsing visible, but turns it into something calmer and more actionable.
@@ -71,6 +75,19 @@ Most new tab pages try to be a search box, a wallpaper, or a speed dial. Tab Har
 That also means it is intentionally lightweight. There is no backend, no sync account, and no extra app to open. It lives exactly where the browsing chaos already happens.
 
 ## ⚡ Quick Use
+
+### Install from the Chrome Web Store
+
+1. Open Tab Harbor in the Chrome Web Store:
+
+   ```text
+   https://chromewebstore.google.com/detail/tab-harbor/bkjihmeifgjifhkleokclpobdfnhiodf?authuser=0&hl=zh-CN
+   ```
+
+2. Install it from the store.
+3. Open a new tab in Chrome.
+
+Due to package review, the actual version may appear a little later.
 
 ### Install with a coding agent
 
@@ -99,7 +116,7 @@ That also means it is intentionally lightweight. There is no backend, no sync ac
 
 ## 🔒 Fully Local
 
-Tab Harbor runs entirely inside the extension. Open tabs come directly from Chrome, and saved reads, todos, quick links, theme preferences, and layout state stay on your machine through `chrome.storage.local`.
+Tab Harbor runs entirely inside the extension. Open tabs come directly from Chrome, and saved sessions, todos, quick links, theme preferences, and layout state stay on your machine through `chrome.storage.local`.
 
 If you publish this repo for other people, they get the code and assets, not your personal browsing data.
 
