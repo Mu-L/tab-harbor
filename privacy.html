@@ -424,7 +424,7 @@
         This page explains what data the extension accesses, why it needs that data, and how that data is handled.
       </p>
       <div class="meta" aria-label="Policy metadata">
-        <span class="meta-item">Last updated: 2026-04-18</span>
+        <span class="meta-item">Last updated: 2026-05-27</span>
         <span class="meta-item">Local-first by default</span>
         <span class="meta-item">No remote code</span>
       </div>
@@ -499,6 +499,18 @@
           <ul>
             <li>let the user explicitly paste an image or SVG into the shortcut editor for a custom shortcut icon</li>
           </ul>
+          <p><strong><code>tabGroups</code></strong></p>
+          <ul>
+            <li>read existing native Chrome tab groups</li>
+            <li>create or update Chrome tab groups to match the workspace</li>
+            <li>keep group titles, colors, and collapsed state aligned with the user’s chosen organization</li>
+            <li>respond when Chrome tab groups change outside the Tab Harbor page</li>
+          </ul>
+          <p><strong><code>favicon</code></strong></p>
+          <ul>
+            <li>request and display site icons for tabs, saved sessions, and quick shortcuts more reliably</li>
+            <li>use Chrome’s packaged favicon endpoint, a site’s own <code>favicon.ico</code>, or a fallback favicon service when no better icon is available</li>
+          </ul>
         </section>
 
         <section id="storage">
@@ -511,7 +523,7 @@
         <section id="sharing">
           <h2>6. Data sharing</h2>
           <p>Tab Harbor does not sell user data.</p>
-          <p>Tab Harbor does not transfer user data to third parties except where necessary to perform a user-requested browser action, such as opening a page chosen by the user or submitting a search through the browser’s default search engine.</p>
+          <p>Tab Harbor does not transfer user data to third parties except where necessary to perform a user-requested browser action, such as opening a page chosen by the user, submitting a search through the browser’s default search engine, or requesting favicon resources needed to display site icons in the workspace.</p>
           <p>Aside from those normal browser actions initiated by the user, Tab Harbor does not send workspace data to a developer-controlled remote service.</p>
         </section>
 
@@ -525,6 +537,7 @@
           <h2>8. Third-party services</h2>
           <p>Tab Harbor relies on Chrome’s extension platform APIs to function.</p>
           <p>When a user opens a webpage or submits a search through the extension, the browser may connect to the destination website or the configured default search engine as part of the user’s explicit action.</p>
+          <p>To render site icons, Tab Harbor may also request favicon resources from a page’s origin or a fallback favicon service based on the page URLs already visible in the workspace.</p>
         </section>
 
         <section id="choices">
