@@ -198,7 +198,8 @@ test('new tab dashboard scopes visible open tabs to its own browser window', () 
   assert.match(runtimeJs, /const visibleTabs = currentWindowId == null\s*\?\s*tabs\s*:\s*tabs\.filter\(t => t\.windowId === currentWindowId\);/);
   assert.match(runtimeJs, /openTabs = visibleTabs\.map\(t =>/);
   assert.match(runtimeJs, /function getOpenTabIdsForSessionPruning\(\)/);
-  assert.match(runtimeJs, /async function queryTabsForDashboardWindow\(\)/);
+  assert.match(runtimeJs, /async function queryTabsForDashboardWindow\(\) \{[\s\S]*chrome\.tabs\.query\(\{\s*windowId: currentWindowId\s*\}\)/);
+  assert.doesNotMatch(runtimeJs, /if \(currentDashboardWindowId != null\) return currentDashboardWindowId;/);
   assert.match(runtimeJs, /await loadSessionGroups\(getOpenTabIdsForSessionPruning\(\)\)/);
   assert.match(runtimeJs, /async function closeTabsByUrls\(urls\) \{[\s\S]*const allTabs = await queryTabsForDashboardWindow\(\);/);
   assert.match(runtimeJs, /async function closeTabsExact\(urls\) \{[\s\S]*const allTabs = await queryTabsForDashboardWindow\(\);/);

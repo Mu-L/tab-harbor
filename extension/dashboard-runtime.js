@@ -752,11 +752,14 @@ function getOpenTabIdsForSessionPruning() {
 }
 
 async function queryTabsForDashboardWindow() {
-  const tabs = await chrome.tabs.query({});
   const currentWindowId = await getDashboardWindowIdForOpenTabs();
-  return currentWindowId == null
-    ? tabs
-    : tabs.filter(tab => tab.windowId === currentWindowId);
+  if (currentWindowId == null) return chrome.tabs.query({});
+
+  try {
+    return await chrome.tabs.query({ windowId: currentWindowId });
+  } catch {
+    return chrome.tabs.query({});
+  }
 }
 
 async function loadSessionGroups(openTabIds = []) {
@@ -1094,8 +1097,6 @@ async function getCurrentWindowId() {
 }
 
 async function getDashboardWindowIdForOpenTabs() {
-  if (currentDashboardWindowId != null) return currentDashboardWindowId;
-
   const currentTab = await resolveCurrentDashboardTab();
   if (currentTab?.windowId != null) {
     currentDashboardWindowId = currentTab.windowId;

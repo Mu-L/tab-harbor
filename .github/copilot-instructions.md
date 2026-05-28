@@ -1,3 +1,5 @@
+When performing a code review, respond in Simplified Chinese.
+
 ## Design Context
 
 ### Product Overview
