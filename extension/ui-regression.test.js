@@ -1061,7 +1061,7 @@ test('dashboard auto-refreshes when tabs change via background message', () => {
   // to a content script would always fail with "Receiving end does not exist").
   assert.match(bgJs, /notifyTabHarborPages/);
   assert.match(bgJs, /chrome\.runtime\.sendMessage/);
-  assert.doesNotMatch(bgJs, /await chrome\.tabs\.sendMessage/);
+  assert.doesNotMatch(bgJs, /chrome\.tabs\.sendMessage/);
   assert.match(bgJs, /action:\s*["']tabs-changed["']/);
   assert.match(bgJs, /triggerTabId/);
   assert.match(bgJs, /source:\s*["']tabs\.onCreated["']/);
