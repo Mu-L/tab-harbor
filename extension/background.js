@@ -91,7 +91,11 @@ async function notifyTabHarborPages(eventMeta = {}) {
   try {
     await chrome.runtime.sendMessage(message);
   } catch (err) {
-    console.warn("[tab-harbor bg] Error notifying Tab Harbor pages:", err);
+    // 没有接收方（dashboard/popup 未打开）时的典型报错，广播无需接收方，静默吞掉
+    const messageText = err && err.message ? err.message : String(err);
+    if (!messageText.includes("Receiving end does not exist")) {
+      console.warn("[tab-harbor bg] Error notifying Tab Harbor pages:", err);
+    }
   }
 }
 

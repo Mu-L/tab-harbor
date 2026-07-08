@@ -345,7 +345,7 @@ test('optional local config is loaded safely before app mount', () => {
 });
 
 test('background keeps the toolbar badge empty', () => {
-  assert.match(backgroundJs, /await chrome\.action\.setBadgeText\(\{\s*text:\s*''\s*\}\)/);
+  assert.match(backgroundJs, /await chrome\.action\.setBadgeText\(\{\s*text:\s*["']{2}\s*\}\)/);
   assert.doesNotMatch(backgroundJs, /String\(count\)/);
 });
 
@@ -1062,10 +1062,10 @@ test('dashboard auto-refreshes when tabs change via background message', () => {
   assert.match(bgJs, /notifyTabHarborPages/);
   assert.match(bgJs, /chrome\.runtime\.sendMessage/);
   assert.doesNotMatch(bgJs, /await chrome\.tabs\.sendMessage/);
-  assert.match(bgJs, /action:\s*'tabs-changed'/);
+  assert.match(bgJs, /action:\s*["']tabs-changed["']/);
   assert.match(bgJs, /triggerTabId/);
-  assert.match(bgJs, /source:\s*'tabs\.onCreated'/);
-  assert.match(bgJs, /source:\s*'tabs\.onUpdated'/);
+  assert.match(bgJs, /source:\s*["']tabs\.onCreated["']/);
+  assert.match(bgJs, /source:\s*["']tabs\.onUpdated["']/);
   assert.match(bgJs, /chrome\.tabs\.onCreated\.addListener/);
   assert.match(bgJs, /chrome\.tabs\.onRemoved\.addListener/);
   
