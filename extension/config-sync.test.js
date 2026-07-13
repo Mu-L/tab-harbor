@@ -63,6 +63,24 @@ test('exportConfig returns JSON with version, exportedAt, and all three keys', a
   });
 });
 
+test('exportConfig strips icon/iconKind from quickShortcuts', async () => {
+  const initial = {
+    quickShortcuts: [
+      { id: 's1', url: 'https://example.com', label: 'Example', icon: 'data:image/png;base64,abc', iconKind: 'image' },
+    ],
+  };
+
+  await withMockStorage(initial, async () => {
+    const json = await exportConfig();
+    const parsed = JSON.parse(json);
+
+    assert.equal(parsed.quickShortcuts.length, 1);
+    assert.ok(!('icon' in parsed.quickShortcuts[0]));
+    assert.ok(!('iconKind' in parsed.quickShortcuts[0]));
+    assert.equal(parsed.quickShortcuts[0].url, 'https://example.com');
+  });
+});
+
 test('exportConfig works with empty/missing data', async () => {
   await withMockStorage({}, async () => {
     const json = await exportConfig();
@@ -106,6 +124,44 @@ test('importConfig rejects invalid JSON', async () => {
       importConfig('{ broken json'),
       /not valid JSON/,
     );
+  });
+});
+
+test('importConfig strips icon/iconKind from quickShortcuts', async () => {
+  const incoming = {
+    quickShortcuts: [
+      { id: 's1', url: 'https://example.com', label: 'Example', icon: 'data:image/png;base64,abc', iconKind: 'image' },
+      { id: 's2', url: 'https://test.dev', label: 'Test', icon: '🔥', iconKind: 'glyph' },
+    ],
+  };
+
+  await withMockStorage({}, async (store) => {
+    await importConfig(JSON.stringify(incoming));
+
+    assert.equal(store.quickShortcuts.length, 2);
+    for (const shortcut of store.quickShortcuts) {
+      assert.ok(!('icon' in shortcut));
+      assert.ok(!('iconKind' in shortcut));
+    }
+    assert.equal(store.quickShortcuts[0].url, 'https://example.com');
+    assert.equal(store.quickShortcuts[1].label, 'Test');
+  });
+});
+
+test('importConfig treats null values as absent (skips them)', async () => {
+  const incoming = {
+    themePreferences: null,
+    quickShortcuts: null,
+    savedTabSessions: [{ id: 's1', name: 'Test', savedAt: '2026-01-01T00:00:00.000Z', source: 'manual', tabs: [{ url: 'https://example.com', title: 'Example' }], groups: [] }],
+  };
+
+  await withMockStorage({}, async (store) => {
+    const result = await importConfig(JSON.stringify(incoming));
+
+    assert.deepEqual(result.importedKeys, ['savedTabSessions']);
+    assert.ok(!('themePreferences' in store));
+    assert.ok(!('quickShortcuts' in store));
+    assert.ok(Array.isArray(store.savedTabSessions));
   });
 });
 

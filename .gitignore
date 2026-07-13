@@ -6,3 +6,4 @@ dist/*.zip
 .vscode
 CLAUDE.local.md
 CLAUDE.md
+.codegraph/

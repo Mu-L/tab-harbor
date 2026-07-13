@@ -25,6 +25,9 @@
     for (const key of STORAGE_KEYS) {
       config[key] = key in data ? data[key] : null;
     }
+    if (Array.isArray(config.quickShortcuts)) {
+      config.quickShortcuts = config.quickShortcuts.map(({ icon, iconKind, ...rest }) => rest);
+    }
     return JSON.stringify(config, null, 2);
   }
 
@@ -36,10 +39,10 @@
     if (!hasKey) {
       throw new Error('Invalid config: missing recognized data keys');
     }
-    if (parsed.quickShortcuts !== undefined && !Array.isArray(parsed.quickShortcuts)) {
+    if (parsed.quickShortcuts != null && !Array.isArray(parsed.quickShortcuts)) {
       throw new Error('Invalid config: quickShortcuts must be an array');
     }
-    if (parsed.savedTabSessions !== undefined && !Array.isArray(parsed.savedTabSessions)) {
+    if (parsed.savedTabSessions != null && !Array.isArray(parsed.savedTabSessions)) {
       throw new Error('Invalid config: savedTabSessions must be an array');
     }
   }
@@ -56,17 +59,18 @@
 
     const storagePayload = {};
 
-    if ('themePreferences' in parsed && isValidConfigObject(parsed.themePreferences)) {
+    if (isValidConfigObject(parsed.themePreferences)) {
       storagePayload.themePreferences = parsed.themePreferences;
     }
 
-    if ('quickShortcuts' in parsed && Array.isArray(parsed.quickShortcuts)) {
+    if (Array.isArray(parsed.quickShortcuts)) {
+      const stripped = parsed.quickShortcuts.map(({ icon, iconKind, ...rest }) => rest);
       storagePayload.quickShortcuts = apiNormalizeQuickShortcuts
-        ? apiNormalizeQuickShortcuts(parsed.quickShortcuts)
-        : parsed.quickShortcuts;
+        ? apiNormalizeQuickShortcuts(stripped)
+        : stripped;
     }
 
-    if ('savedTabSessions' in parsed && Array.isArray(parsed.savedTabSessions)) {
+    if (Array.isArray(parsed.savedTabSessions)) {
       storagePayload.savedTabSessions = apiNormalizeSavedTabSessions
         ? apiNormalizeSavedTabSessions(parsed.savedTabSessions)
         : parsed.savedTabSessions;
