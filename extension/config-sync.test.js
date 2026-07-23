@@ -44,11 +44,23 @@ async function withMockStorage(initial, fn) {
   }
 }
 
-test('exportConfig returns JSON with version, exportedAt, and all three keys', async () => {
+test('exportConfig returns the complete versioned configuration with custom icons', async () => {
   const initial = {
     themePreferences: { mode: 'dark', paletteId: 'sage' },
-    quickShortcuts: [{ id: 's1', url: 'https://example.com', label: 'Example' }],
+    quickShortcuts: [{ id: 's1', url: 'https://example.com', label: 'Example', icon: '🔥', iconKind: 'glyph' }],
     savedTabSessions: [],
+    languagePreference: 'zh-CN',
+    todos: [{ id: 'todo-1', title: 'Read' }],
+    sessionGroups: { groups: [], assignments: {} },
+    groupOrder: { sessionOrder: ['g1'], pinnedOrder: [], pinEnabled: true },
+    groupTabOrder: { g1: ['tab-1'] },
+    groupLabelOverrides: { g1: 'Work' },
+    savedTabSessionOrder: ['session-1'],
+    savedTabSessionCollapsedState: { 'session-1': true },
+    chromeTabGroupsEnabled: true,
+    chromeTabGroupsMeta: { entries: [] },
+    importedChromeSessionGroups: { entries: [] },
+    deferredTriggerPosition: { top: 120 },
   };
 
   await withMockStorage(initial, async () => {
@@ -60,24 +72,8 @@ test('exportConfig returns JSON with version, exportedAt, and all three keys', a
     assert.deepEqual(parsed.themePreferences, initial.themePreferences);
     assert.deepEqual(parsed.quickShortcuts, initial.quickShortcuts);
     assert.deepEqual(parsed.savedTabSessions, initial.savedTabSessions);
-  });
-});
-
-test('exportConfig strips icon/iconKind from quickShortcuts', async () => {
-  const initial = {
-    quickShortcuts: [
-      { id: 's1', url: 'https://example.com', label: 'Example', icon: 'data:image/png;base64,abc', iconKind: 'image' },
-    ],
-  };
-
-  await withMockStorage(initial, async () => {
-    const json = await exportConfig();
-    const parsed = JSON.parse(json);
-
-    assert.equal(parsed.quickShortcuts.length, 1);
-    assert.ok(!('icon' in parsed.quickShortcuts[0]));
-    assert.ok(!('iconKind' in parsed.quickShortcuts[0]));
-    assert.equal(parsed.quickShortcuts[0].url, 'https://example.com');
+    for (const key of STORAGE_KEYS) assert.ok(key in parsed, `missing ${key}`);
+    assert.deepEqual(parsed, { ...parsed, ...initial });
   });
 });
 
@@ -87,16 +83,18 @@ test('exportConfig works with empty/missing data', async () => {
     const parsed = JSON.parse(json);
 
     assert.equal(parsed.version, CONFIG_VERSION);
-    assert.ok('themePreferences' in parsed);
-    assert.ok('quickShortcuts' in parsed);
-    assert.ok('savedTabSessions' in parsed);
+    for (const key of STORAGE_KEYS) {
+      assert.ok(key in parsed, `missing ${key}`);
+      assert.equal(parsed[key], null);
+    }
   });
 });
 
-test('importConfig writes valid data to storage', async () => {
+test('importConfig writes the complete configuration to storage', async () => {
   const incoming = {
+    version: CONFIG_VERSION,
     themePreferences: { mode: 'light', paletteId: 'mist' },
-    quickShortcuts: [{ id: 's2', url: 'https://test.dev', label: 'Test' }],
+    quickShortcuts: [{ id: 's2', url: 'https://test.dev', label: 'Test', icon: '🔥', iconKind: 'glyph' }],
     savedTabSessions: [{
       id: 'tab-session-123',
       name: 'My tabs',
@@ -105,13 +103,25 @@ test('importConfig writes valid data to storage', async () => {
       tabs: [{ url: 'https://example.com', title: 'Example' }],
       groups: [],
     }],
+    languagePreference: 'en',
+    todos: [],
+    sessionGroups: { groups: [], assignments: {} },
+    groupOrder: { sessionOrder: [], pinnedOrder: [], pinEnabled: false },
+    groupTabOrder: {},
+    groupLabelOverrides: {},
+    savedTabSessionOrder: [],
+    savedTabSessionCollapsedState: {},
+    chromeTabGroupsEnabled: false,
+    chromeTabGroupsMeta: null,
+    importedChromeSessionGroups: { entries: [] },
+    deferredTriggerPosition: { top: null },
   };
   const jsonString = JSON.stringify(incoming);
 
   await withMockStorage({}, async (store) => {
     const result = await importConfig(jsonString);
 
-    assert.deepEqual(result.importedKeys.sort(), ['quickShortcuts', 'savedTabSessions', 'themePreferences']);
+    assert.deepEqual(result.importedKeys.sort(), [...STORAGE_KEYS].sort());
     assert.ok(store.themePreferences);
     assert.ok(Array.isArray(store.quickShortcuts));
     assert.ok(Array.isArray(store.savedTabSessions));
@@ -127,41 +137,34 @@ test('importConfig rejects invalid JSON', async () => {
   });
 });
 
-test('importConfig strips icon/iconKind from quickShortcuts', async () => {
-  const incoming = {
-    quickShortcuts: [
-      { id: 's1', url: 'https://example.com', label: 'Example', icon: 'data:image/png;base64,abc', iconKind: 'image' },
-      { id: 's2', url: 'https://test.dev', label: 'Test', icon: '🔥', iconKind: 'glyph' },
-    ],
-  };
-
-  await withMockStorage({}, async (store) => {
-    await importConfig(JSON.stringify(incoming));
-
-    assert.equal(store.quickShortcuts.length, 2);
-    for (const shortcut of store.quickShortcuts) {
-      assert.ok(!('icon' in shortcut));
-      assert.ok(!('iconKind' in shortcut));
-    }
-    assert.equal(store.quickShortcuts[0].url, 'https://example.com');
-    assert.equal(store.quickShortcuts[1].label, 'Test');
-  });
-});
-
-test('importConfig treats null values as absent (skips them)', async () => {
+test('importConfig treats null values as explicit resets', async () => {
   const incoming = {
     themePreferences: null,
     quickShortcuts: null,
-    savedTabSessions: [{ id: 's1', name: 'Test', savedAt: '2026-01-01T00:00:00.000Z', source: 'manual', tabs: [{ url: 'https://example.com', title: 'Example' }], groups: [] }],
+    savedTabSessions: null,
+  };
+  const initial = {
+    themePreferences: { mode: 'dark' },
+    quickShortcuts: [{ id: 'old', url: 'https://old.example' }],
+    savedTabSessions: [{ id: 'old' }],
   };
 
-  await withMockStorage({}, async (store) => {
+  await withMockStorage(initial, async (store) => {
     const result = await importConfig(JSON.stringify(incoming));
 
-    assert.deepEqual(result.importedKeys, ['savedTabSessions']);
-    assert.ok(!('themePreferences' in store));
-    assert.ok(!('quickShortcuts' in store));
-    assert.ok(Array.isArray(store.savedTabSessions));
+    assert.deepEqual(result.importedKeys.sort(), ['quickShortcuts', 'savedTabSessions', 'themePreferences']);
+    assert.equal(store.themePreferences, null);
+    assert.deepEqual(store.quickShortcuts, []);
+    assert.deepEqual(store.savedTabSessions, []);
+  });
+});
+
+test('importConfig rejects unsupported versions', async () => {
+  await withMockStorage({}, async () => {
+    await assert.rejects(
+      importConfig(JSON.stringify({ version: CONFIG_VERSION + 1, quickShortcuts: [] })),
+      /unsupported config version/,
+    );
   });
 });
 

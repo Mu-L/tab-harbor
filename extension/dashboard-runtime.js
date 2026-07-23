@@ -3055,15 +3055,11 @@ async function handleConfigImportInput(inputEl) {
   try {
     const text = await file.text();
     const result = await configSync.importConfig(text);
-    await loadThemePreferences();
-    await renderQuickShortcuts();
-    if (document.body.classList.contains('showing-saved-tabs-page')) {
-      await globalThis.TabHarborSessionManager?.renderSavedTabsPage?.();
-    }
     setThemeMenuOpen(false, { restoreFocus: true });
     showToast(runtimeT
       ? runtimeT('toastConfigImported', { keys: result.importedKeys.length })
       : `Imported ${result.importedKeys.length} setting${result.importedKeys.length !== 1 ? 's' : ''}`);
+    globalThis.location?.reload?.();
   } catch (err) {
     console.error('[tab-harbor] Import failed:', err);
     showToast(err?.message || (runtimeT ? runtimeT('toastConfigImportFailed') : 'Import failed'));

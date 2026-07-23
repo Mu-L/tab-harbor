@@ -10,7 +10,41 @@
   } = globalScope.TabHarborTabSessions || {};
 
   const CONFIG_VERSION = 1;
-  const STORAGE_KEYS = ['themePreferences', 'quickShortcuts', 'savedTabSessions'];
+  const STORAGE_KEYS = [
+    'themePreferences',
+    'quickShortcuts',
+    'savedTabSessions',
+    'languagePreference',
+    'todos',
+    'sessionGroups',
+    'groupOrder',
+    'groupTabOrder',
+    'groupLabelOverrides',
+    'savedTabSessionOrder',
+    'savedTabSessionCollapsedState',
+    'chromeTabGroupsEnabled',
+    'chromeTabGroupsMeta',
+    'importedChromeSessionGroups',
+    'deferredTriggerPosition',
+  ];
+
+  const STORAGE_DEFAULTS = {
+    themePreferences: null,
+    quickShortcuts: [],
+    savedTabSessions: [],
+    languagePreference: 'auto',
+    todos: [],
+    sessionGroups: { groups: [], assignments: {} },
+    groupOrder: { sessionOrder: [], pinnedOrder: [], pinEnabled: false },
+    groupTabOrder: {},
+    groupLabelOverrides: {},
+    savedTabSessionOrder: [],
+    savedTabSessionCollapsedState: {},
+    chromeTabGroupsEnabled: false,
+    chromeTabGroupsMeta: null,
+    importedChromeSessionGroups: { entries: [] },
+    deferredTriggerPosition: { top: null },
+  };
 
   function isValidConfigObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -25,26 +59,58 @@
     for (const key of STORAGE_KEYS) {
       config[key] = key in data ? data[key] : null;
     }
-    if (Array.isArray(config.quickShortcuts)) {
-      config.quickShortcuts = config.quickShortcuts.map(({ icon, iconKind, ...rest }) => rest);
-    }
     return JSON.stringify(config, null, 2);
+  }
+
+  function getDefaultValue(key) {
+    const value = STORAGE_DEFAULTS[key];
+    if (Array.isArray(value)) return [];
+    if (value && typeof value === 'object') return structuredClone(value);
+    return value;
+  }
+
+  function isValidImportValue(key, value) {
+    if (value === null || value === undefined) return true;
+    if (key === 'quickShortcuts' || key === 'savedTabSessions' || key === 'todos' || key === 'savedTabSessionOrder') {
+      return Array.isArray(value);
+    }
+    if (key === 'languagePreference') return typeof value === 'string';
+    if (key === 'chromeTabGroupsEnabled') return typeof value === 'boolean';
+    return isValidConfigObject(value);
   }
 
   function validateImportData(parsed) {
     if (!isValidConfigObject(parsed)) {
       throw new Error('Invalid config: root must be an object');
     }
+    const version = parsed.version == null ? CONFIG_VERSION : parsed.version;
+    if (version !== CONFIG_VERSION) {
+      throw new Error(`Invalid config: unsupported config version ${version}`);
+    }
     const hasKey = STORAGE_KEYS.some(key => key in parsed);
     if (!hasKey) {
       throw new Error('Invalid config: missing recognized data keys');
     }
-    if (parsed.quickShortcuts != null && !Array.isArray(parsed.quickShortcuts)) {
-      throw new Error('Invalid config: quickShortcuts must be an array');
+    for (const key of STORAGE_KEYS) {
+      if (key in parsed && !isValidImportValue(key, parsed[key])) {
+        const arrayKeys = ['quickShortcuts', 'savedTabSessions', 'todos', 'savedTabSessionOrder'];
+        const message = arrayKeys.includes(key)
+          ? `${key} must be an array`
+          : `${key} has an invalid value`;
+        throw new Error(`Invalid config: ${message}`);
+      }
     }
-    if (parsed.savedTabSessions != null && !Array.isArray(parsed.savedTabSessions)) {
-      throw new Error('Invalid config: savedTabSessions must be an array');
+  }
+
+  function normalizeImportValue(key, value) {
+    if (value === null || value === undefined) return getDefaultValue(key);
+    if (key === 'quickShortcuts') {
+      return apiNormalizeQuickShortcuts ? apiNormalizeQuickShortcuts(value) : value;
     }
+    if (key === 'savedTabSessions') {
+      return apiNormalizeSavedTabSessions ? apiNormalizeSavedTabSessions(value) : value;
+    }
+    return value;
   }
 
   async function importConfig(jsonString) {
@@ -58,22 +124,8 @@
     validateImportData(parsed);
 
     const storagePayload = {};
-
-    if (isValidConfigObject(parsed.themePreferences)) {
-      storagePayload.themePreferences = parsed.themePreferences;
-    }
-
-    if (Array.isArray(parsed.quickShortcuts)) {
-      const stripped = parsed.quickShortcuts.map(({ icon, iconKind, ...rest }) => rest);
-      storagePayload.quickShortcuts = apiNormalizeQuickShortcuts
-        ? apiNormalizeQuickShortcuts(stripped)
-        : stripped;
-    }
-
-    if (Array.isArray(parsed.savedTabSessions)) {
-      storagePayload.savedTabSessions = apiNormalizeSavedTabSessions
-        ? apiNormalizeSavedTabSessions(parsed.savedTabSessions)
-        : parsed.savedTabSessions;
+    for (const key of STORAGE_KEYS) {
+      if (key in parsed) storagePayload[key] = normalizeImportValue(key, parsed[key]);
     }
 
     if (Object.keys(storagePayload).length === 0) {
